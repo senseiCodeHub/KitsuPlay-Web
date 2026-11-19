@@ -1,0 +1,16 @@
+# Secrets — the live values for this install.
+app/env.php
+
+# Writable runtime stores.
+storage/cache/*
+storage/logs/*
+!storage/cache/.gitkeep
+!storage/logs/.gitkeep
+
+# OS noise.
+.DS_Store
+Thumbs.db
+
+# Editor folders.
+.idea/
+.vscode/

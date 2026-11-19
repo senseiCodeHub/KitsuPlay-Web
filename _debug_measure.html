@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>measure</title>
+<style>body{margin:0;background:#222;color:#eee;font:12px/1.4 Consolas,monospace}
+pre{margin:0;padding:8px;white-space:pre-wrap}
+iframe{border:0;display:block}</style></head>
+<body><pre id="out">loading…</pre>
+<iframe id="f" src="/KitsuPlay-Web/index.php/watch?ref=mlbd-series-chutney-sambar-2024-season-1-completed-org-bengali-dubbed&season=1&episode=1" width="390" height="600"></iframe>
+<script>
+function measure(d, w, tag){
+  const L = ['== ' + tag + ' ==', 'innerWidth=' + w.innerWidth + ' docScrollW=' + d.documentElement.scrollWidth];
+  const box = (el, name) => { if(!el){ L.push(name+' MISSING'); return null; }
+    const r = el.getBoundingClientRect();
+    L.push(name+' L'+Math.round(r.left)+' R'+Math.round(r.right)+' W'+Math.round(r.width)+' T'+Math.round(r.top)+' B'+Math.round(r.bottom));
+    return r; };
+  const row = d.querySelector('.player__row');
+  const ctr = d.querySelector('.player__controls');
+  box(ctr,'controls');
+  box(row,'row');
+  if (row){
+    L.push('row scrollW='+row.scrollWidth+' clientW='+row.clientWidth+' offsetH='+row.offsetHeight+' scrollH='+row.scrollHeight);
+    L.push('row computed wrap='+w.getComputedStyle(row).flexWrap+' overflow='+w.getComputedStyle(row).overflow);
+    [...row.children].forEach((c,i)=>{
+      const r=c.getBoundingClientRect();
+      const nm=(c.tagName+'.'+(c.className||'')).slice(0,34);
+      const vis=w.getComputedStyle(c).display;
+      L.push('  ['+i+'] '+nm+' L'+Math.round(r.left)+' R'+Math.round(r.right)+' W'+Math.round(r.width)+' disp='+vis);
+    });
+  }
+  box(d.querySelector('.watch__bar'),'watchbar');
+  box(d.querySelector('.watch__title'),'title');
+  box(d.querySelector('[data-player-status]'),'status');
+  box(d.querySelector('.player'),'player');
+  const over=[];
+  d.querySelectorAll('body *').forEach(el=>{const r=el.getBoundingClientRect();
+    if(r.right>w.innerWidth+1&&r.width>0&&r.height>0)over.push((el.tagName+'.'+String(el.className)).slice(0,36)+'@'+Math.round(r.right));});
+  L.push('overflow-right('+over.length+'): '+over.slice(0,12).join(' | '));
+  return L.join('\n');
+}
+function run(){
+  try{
+    const f=document.getElementById('f'), d=f.contentDocument, w=f.contentWindow;
+    if(!d||!d.body||!d.querySelector('.player__row')){document.getElementById('out').textContent='iframe not ready';return;}
+    const parts=[measure(d,w,'mobile 390')];
+    f.style.width='430px';
+    setTimeout(()=>{ parts.push(measure(f.contentDocument,f.contentWindow,'mobile 430'));
+      document.getElementById('out').textContent=parts.join('\n\n'); },600);
+  }catch(e){ document.getElementById('out').textContent='ERROR: '+e.message+' | '+e.stack; }
+}
+const f=document.getElementById('f');
+f.addEventListener('load',()=>setTimeout(run,4000));
+setTimeout(run,12000);
+</script></body></html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>layout debug</title>
+<style>
+  body { background:#fff; color:#000; font:14px/1.45 Consolas, monospace; margin:16px; }
+  pre { background:#f4f4f4; border:1px solid #ccc; padding:10px; white-space:pre-wrap; }
+  iframe { border:2px solid #c00; display:block; margin-top:8px; }
+</style>
+</head>
+<body>
+<h1>layout debug</h1>
+<pre id="out">loading…</pre>
+<iframe id="f" src="/KitsuPlay-Web/" style="width:390px;height:700px"></iframe>
+<script>
+function report(label, d, w) {
+  const lines = ['== ' + label + ' =='];
+  lines.push('innerWidth=' + w.innerWidth + ' dpr=' + w.devicePixelRatio +
+             ' docScrollW=' + d.documentElement.scrollWidth + ' bodyScrollW=' + d.body.scrollWidth);
+  const dump = (sel, name) => {
+    const el = d.querySelector(sel);
+    if (!el) { lines.push(name + ' = MISSING'); return; }
+    const r = el.getBoundingClientRect();
+    lines.push(name + ' left=' + Math.round(r.left) + ' right=' + Math.round(r.right) + ' w=' + Math.round(r.width));
+  };
+  dump('.topbar', 'topbar');
+  dump('.topbar__actions', 'actions');
+  dump('.searchpill', 'pill');
+  dump('.brand--sm', 'brand');
+  dump('.iconbtn', 'iconbtn');
+  dump('.avatar--sm', 'avatar');
+  dump('.tabbar', 'tabbar');
+  dump('.hero', 'hero');
+  const img = d.querySelector('.hero__image');
+  lines.push('heroImg=' + (img ? ('complete=' + img.complete + ' naturalW=' + img.naturalWidth + ' src=' + (img.getAttribute('src') || 'EMPTY').slice(0, 70)) : 'MISSING'));
+  const tabs = [...d.querySelectorAll('.tabbar__link')].map(a => {
+    const r = a.getBoundingClientRect();
+    return Math.round(r.left) + '..' + Math.round(r.right);
+  });
+  lines.push('tabs: ' + tabs.join(' , '));
+  const over = [];
+  d.querySelectorAll('body *').forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (r.right > w.innerWidth + 1 && r.width > 0) over.push((el.tagName + '.' + (el.className || '')).slice(0, 36) + '@' + Math.round(r.right));
+  });
+  lines.push('overflow-right (' + over.length + '): ' + over.slice(0, 10).join(' | '));
+  return lines.join('\n');
+}
+function collect() {
+  const f = document.getElementById('f');
+  const d = f.contentDocument, w = f.contentWindow;
+  if (!d || !d.body || !d.querySelector('.topbar')) return null;
+  const a = report('width 390', d, w);
+  f.style.width = '430px';
+  return new Promise(res => setTimeout(() => {
+    const b = report('width 430', d, f.contentWindow);
+    f.style.width = '390px';
+    setTimeout(() => res(a + '\n\n' + b), 400);
+  }, 500));
+}
+async function go() {
+  try {
+    const text = await collect();
+    if (!text) { document.getElementById('out').textContent = 'iframe not ready'; return; }
+    document.getElementById('out').textContent = text;
+    await fetch('/_debug_result.php', { method: 'POST', body: text });
+    document.getElementById('out').textContent = text + '\n\nPOSTED ok';
+  } catch (e) {
+    document.getElementById('out').textContent = 'ERROR: ' + e.message;
+    try { await fetch('/_debug_result.php', { method: 'POST', body: 'ERROR: ' + e.message }); } catch (e2) {}
+  }
+}
+const f = document.getElementById('f');
+f.addEventListener('load', () => setTimeout(go, 1500));
+setTimeout(go, 9000);
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>play e2e debug</title></head>
+<body><pre id="out">running…</pre>
+<script>
+const BASE = location.pathname.replace(/\/[^/]*$/, "");
+const WATCH = BASE + "/index.php/watch?ref=mlbd-series-chutney-sambar-2024-season-1-completed-org-bengali-dubbed&season=1&episode=1";
+const lines = [];
+function log(s){ lines.push(s); document.getElementById('out').textContent = lines.join('\n'); }
+window.onerror = function(m,src,l){ log('JSERR: '+m+' @'+src+':'+l); };
+
+async function go(){
+  try {
+    const html = await (await fetch(WATCH, {credentials:'same-origin'})).text();
+    log('watch page len=' + html.length);
+    const m = html.match(/data-payload="([^"]*)"/);
+    if (!m) { log('NO payload attr'); return; }
+    const payload = JSON.parse(m[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#039;/g,"'"));
+    log('playUrl=' + payload.playUrl);
+    log('season=' + payload.season + ' episode=' + payload.episode + ' episodes=' + (payload.episodes||[]).length);
+    log('episodes=' + JSON.stringify((payload.episodes||[]).map(e=>e.label)));
+    log('nextUrl=' + payload.nextUrl);
+
+    const r = await fetch(payload.playUrl + '?ref=' + encodeURIComponent(payload.ref) + '&season=' + payload.season + '&episode=' + payload.episode,
+                          { headers:{Accept:'application/json'}, credentials:'same-origin' });
+    log('play status=' + r.status);
+    const text = await r.text();
+    let data=null;
+    try { data = JSON.parse(text); } catch(e){ log('JSON THROW: ' + e.message + ' head=' + text.slice(0,150)); return; }
+    log('ok=' + data.ok + ' sources=' + (data.sources?data.sources.length:0));
+    if (!data.sources || !data.sources[0]) { log('no source; err=' + data.error); return; }
+    const u = data.sources[0].url;
+    log('src0=' + u.slice(0,110));
+    const pr = await fetch(u, {credentials:'same-origin'});
+    log('proxy status=' + pr.status + ' ct=' + (pr.headers.get('content-type')||''));
+    const pt = await pr.text();
+    log('proxy head=' + pt.slice(0,150).replace(/\n/g,' | '));
+    log('Hls=' + (typeof window.Hls));
+  } catch(e){
+    log('TOP THROW: ' + (e&&e.message) + ' | ' + (e&&e.name));
+    if (e&&e.stack) log('stack=' + e.stack.slice(0,300));
+  }
+  log('DONE');
+}
+go();
+</script>
+</body></html>
